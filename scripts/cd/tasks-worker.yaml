@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tasks-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tasks-worker
+  template:
+    metadata:
+      annotations:
+        instrumentation.opentelemetry.io/inject-python: "true"
+      labels:
+        app: tasks-worker
+    spec:
+      containers: 
+      - name: tasks-worker
+        image: $CONTAINER_REGISTRY/$NAME:$VERSION
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: CELERY_BROKER_URL
+          value: "redis://redis:6379/0"
+        - name: CELERY_BACKEND_URL
+          value: "redis://redis:6379/0"
+        - name: POSTGRES_URL
+          value: $POSTGRES_URL
+        - name: SECRET
+          value: ${SECRET}
+        - name: ENV_NAME
+          value: $ENV_NAME
+        - name: LIFETIME_SECONDS
+          value: "${LIFETIME_SECONDS}"
+        - name: DBNAME
+          value: ${DBNAME}
+        - name: AUDIENCE
+          value: "${AUDIENCE}"
+        command: ["celery", "-A", "api.celery_worker.celery_app", "worker", "--loglevel=info"]
+      imagePullSecrets:
+        - name: capcom
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tasks-worker
+spec:
+  selector:
+    app: tasks-worker
+  type: ClusterIP
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8000

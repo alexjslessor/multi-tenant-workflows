@@ -1,0 +1,182 @@
+name: backend
+on:
+  push:
+    branches:
+      - 'feature/**'
+      - 'codex/**'
+      - develop
+      - master
+    paths:
+      - backend/**
+  workflow_dispatch: # Allows deployment to be invoked manually through the GitHub Actions user interface.
+
+env:
+  NAME: backend
+  DIRECTORY: backend
+  VERSION: ${{ github.sha }}
+  # Authentication variables
+  SECRET: ${{secrets.SECRET}}
+  # GCP variables
+  CLUSTER_NAME: ${{ vars.CLUSTER_NAME }}
+  GCP_PROJECT: ${{ vars.GCP_PROJECT }}
+  GCP_ZONE: ${{ vars.GCP_ZONE }}
+  # Dockerhub variables
+  REGISTRY_UN: ${{ vars.REGISTRY_UN }}
+  REGISTRY_PW: ${{ secrets.REGISTRY_PW }}
+  CONTAINER_REGISTRY: ${{ vars.CONTAINER_REGISTRY }}
+
+jobs:
+  test:
+    if: startsWith(github.ref_name, 'feature/') || startsWith(github.ref_name, 'codex/') || github.ref_name == 'develop'
+    name: unit-test with GHA mongodb
+    runs-on: ubuntu-latest
+    environment:
+      name: develop
+    strategy:
+      fail-fast: true # workflow wont stop job if matrix job fails must be true if kubernetes job included
+      matrix:
+        python-version: ["3.10"] # runs workflow for each python version
+    services:
+      mongodb:
+        image: mongo:7.0.0
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand({ ping: 1 })'" 
+          --health-interval 10s 
+          --health-timeout 5s 
+          --health-retries 5
+    env:
+      ENV_NAME: development
+      GCP_BUCKET: ${{ vars.GCP_BUCKET }}
+      DATABASE_URL: mongodb://localhost:27017 #GHA action step mongodb URI
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Authenticate GCP # https://github.com/marketplace/actions/authenticate-to-google-cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ vars.GCP_PROJECT }}
+
+      - name: install python dependencies
+        run: |
+          cd $DIRECTORY
+          python -m pip install --upgrade pip
+          python -m pip install .
+          python -m pip install .[test]
+
+      - name: unit-tests
+        run: |
+          cd $DIRECTORY
+          pytest
+
+  deploy-develop:
+    if: github.ref_name == 'develop'
+    name: Deploy develop environment
+    needs: test
+    runs-on: ubuntu-latest
+    environment:
+      name: develop
+      url: https://dev-api.nhou.live/docs
+    env:
+      ENV_NAME: testing
+      NAMESPACE: testing
+      GCP_BUCKET: ${{ vars.GCP_BUCKET }}
+      DATABASE_URL: ${{ vars.DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+
+      - name: Install gcloud-cli
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ vars.GCP_PROJECT }}
+          version: 'latest'
+          install_components: 'gke-gcloud-auth-plugin'
+
+      - name: Authenticate GKE
+        run: |
+          ./scripts/cd/gke-login.sh
+
+      - name: Change Namespace GKE
+        run: |
+          ./scripts/cd/gke-set-namespace.sh
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.REGISTRY_UN }}
+          password: ${{ secrets.REGISTRY_PW }}
+
+      - name: Build Docker Image
+        run: ./scripts/cd/build-image.sh
+
+      - name: Push Docker image to the container registry.
+        run: ./scripts/cd/push-image.sh
+
+      - name: Deploy # expand & apply Kubernetes configuration with envsubstr.
+        run: ./scripts/cd/deploy.sh
+
+  deploy-prod:
+    if: github.ref_name == 'master'
+    name: Deploy production environment
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+    env:
+      ENV_NAME: production
+      NAMESPACE: default
+      GCP_REGION: ${{ vars.GCP_REGION }}
+      GCP_BUCKET: ${{ vars.GCP_BUCKET }}
+      DATABASE_URL: ${{ vars.DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+
+      - name: Install gcloud-cli
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ vars.GCP_PROJECT }}
+          version: 'latest'
+          install_components: 'gke-gcloud-auth-plugin'
+
+      - name: Authenticate GKE
+        run: |
+          ./scripts/cd/gke-login.sh
+
+      - name: Change Namespace GKE
+        run: |
+          ./scripts/cd/gke-set-namespace.sh
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.REGISTRY_UN }}
+          password: ${{ secrets.REGISTRY_PW }}
+
+      - name: Build Docker Image
+        run: ./scripts/cd/build-image.sh
+
+      - name: Push Docker image to the container registry.
+        run: ./scripts/cd/push-image.sh
+
+      - name: Deploy # expand & apply Kubernetes configuration with envsubstr.
+        run: ./scripts/cd/deploy.sh

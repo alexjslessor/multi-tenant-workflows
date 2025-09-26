@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: metadata
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: metadata
+  template:
+    metadata:
+      annotations:
+        instrumentation.opentelemetry.io/inject-python: "true"
+      labels:
+        app: metadata
+    spec:
+      containers:
+        - name: metadata
+          image: $CONTAINER_REGISTRY/$NAME:$VERSION
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: PORT
+              value: "8000"
+            - name: AUDIENCE
+              value: ${AUDIENCE}
+            - name: SECRET
+              value: ${SECRET}
+            - name: POSTGRES_URL
+              value: $POSTGRES_URL
+            - name: LIFETIME_SECONDS
+              value: "${LIFETIME_SECONDS}"
+            - name: DBNAME
+              value: ${DBNAME}
+          ports:
+            - containerPort: 8000
+      imagePullSecrets:
+        - name: capcom
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: metadata
+spec:
+  selector:
+    app: metadata
+  type: ClusterIP
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8000

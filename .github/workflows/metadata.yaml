@@ -1,0 +1,108 @@
+# GitHub Actions workflow.
+# Automatically deploys the Node.js microservice to Kubernetes on push to the main branch.
+# For real use you might want to restrict this to the "prod" branch.
+name: metadata
+
+on: # Deploys the microservice on push to the specified subdirectory in the main branch of this code repository.
+  push: 
+    branches:
+      - main
+      # - feature/**
+    paths:
+      - metadata/**
+      - api-lib/**
+  # Allows deployment to be invoked manually through the GitHub Actions user interface.
+  workflow_dispatch: 
+
+jobs:
+
+  build_lib:
+    runs-on: ubuntu-latest
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE.
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.12
+
+      - name: Install Poetry
+        run: pip install poetry
+
+      - name: Build the library wheel
+        run: |
+          cd ./api-lib
+          poetry install --no-root
+          poetry build -f wheel
+
+      - name: Upload wheel as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-library-wheel
+          path: api-lib/dist/*.whl
+          retention-days: 2
+
+  deploy:
+    name: Deploy to Kubernetes
+    needs: build_lib
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ github.sha }}
+      CONTAINER_REGISTRY: ${{ vars.CONTAINER_REGISTRY }}
+      REGISTRY_UN: ${{ vars.REGISTRY_UN }}
+      REGISTRY_PW: ${{ secrets.REGISTRY_PW  }}
+      NAME: metadata
+      DIRECTORY: metadata
+      DBHOST: ${{ vars.DBHOST }}
+      LIFETIME_SECONDS: ${{ vars.LIFETIME_SECONDS }}
+    steps:
+      - uses: actions/checkout@v3 # Checks-out your repository under $GITHUB_WORKSPACE
+
+      - name: Download wheel artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: python-library-wheel
+
+      - name: Build
+        run: |
+          # ls -la
+          # dd=$(find ./ -type f -name "*.whl")
+          # echo $dd
+          cp ./api_lib-0.1.0-py3-none-any.whl ./$DIRECTORY
+          docker build --build-arg WHEEL_PATH=./api_lib-0.1.0-py3-none-any.whl -t $CONTAINER_REGISTRY/$NAME:$VERSION --file ./$DIRECTORY/Dockerfile-prod ./$DIRECTORY
+
+      # https://github.com/marketplace/actions/authenticate-to-google-cloud
+      - name: Authenticate GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+
+      - name: Set up gcloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ vars.GCP_PROJECT }}
+          version: 'latest'
+          install_components: 'gke-gcloud-auth-plugin'
+
+      - name: Authenticate GKE
+        run: |
+          gcloud container clusters get-credentials ${{ vars.CLUSTER_NAME }} --zone ${{ vars.GCP_ZONE }} --project ${{ vars.GCP_PROJECT }}
+          kubectl get nodes
+
+      # Builds the Docker image.
+      # - name: Build
+        # run: ./scripts/cd/build-image.sh
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.REGISTRY_UN }}
+          password: ${{ secrets.REGISTRY_PW }}
+
+      - name: Publish
+        run: ./scripts/cd/push-image.sh
+
+      # Expands the configuration template and deploys the microservice.
+      - name: Deploy
+        run: ./scripts/cd/deploy.sh

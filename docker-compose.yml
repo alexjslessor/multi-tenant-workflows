@@ -1,0 +1,73 @@
+services:
+
+  metadata:
+    image: metadata
+    container_name: metadata
+    build: 
+      context: ./
+      dockerfile: metadata/Dockerfile-dev
+      args:
+        - WHEEL_PATH=./api-lib/dist/api_lib-0.1.0-py3-none-any.whl
+    volumes:
+      - ./metadata:/usr/src/app:z
+    ports:
+      - "5003:4000"
+    environment:
+      - PORT=4000
+      - RABBIT=amqp://test:test@rabbit:5672
+      - SECRET=47e2a7e0b520f92877df56a98407e69be83614e7a98027d989d1f00e61cbc322
+      - POSTGRES_URL=postgresql://postgres:postgres@postgres:5432/postgres
+      - LIFETIME_SECONDS=3600
+    command: uvicorn api.main:app --host 0.0.0.0 --port 4000 --lifespan on --reload 
+    depends_on:
+      - postgres
+      - rabbit
+    networks:
+      - tenent-net
+    restart: "no"
+
+  tasks:
+    container_name: tasks
+    build:
+      context: ./
+      dockerfile: tasks/Dockerfile-dev
+      args:
+        - WHEEL_PATH=./api-lib/dist/api_lib-0.1.0-py3-none-any.whl
+    volumes:
+      - ./tasks:/usr/src/app:z
+    ports:
+      - "5000:80"
+    environment:
+      - PORT=80
+      - RABBIT=amqp://test:test@rabbit:5672
+      - REDIS_URL=redis://redis:6379/0
+      - POSTGRES_URL=postgresql://postgres:postgres@postgres:5432/postgres
+    depends_on:
+      - redis
+      - postgres
+    networks:
+      - tenent-net
+    command: uvicorn api.main:app --host 0.0.0.0 --port 80 --loop uvloop --lifespan on --reload
+    restart: "no"
+
+  worker:
+    container_name: celery-worker
+    build:
+      context: ./
+      dockerfile: tasks/Dockerfile-dev
+      args:
+        - WHEEL_PATH=./api-lib/dist/api_lib-0.1.0-py3-none-any.whl
+    volumes:
+      - ./tasks:/usr/src/app:z
+    environment:
+      - PORT=80
+      - RABBIT=amqp://test:test@rabbit:5672
+      - REDIS_URL=redis://redis:6379/0
+      - POSTGRES_URL=postgresql://postgres:postgres@postgres:5432/postgres
+    depends_on:
+      - redis
+      - tasks
+    networks:
+      - tenent-net
+    command: celery -A api.celery worker --loglevel=info --pool=solo
+    restart: always

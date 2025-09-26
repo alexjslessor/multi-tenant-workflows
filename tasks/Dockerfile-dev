@@ -1,0 +1,16 @@
+FROM python:3.13-slim-bullseye
+
+WORKDIR /usr/src/app
+
+ARG WHEEL_PATH
+COPY ${WHEEL_PATH} /tmp/api_lib-0.1.0-py3-none-any.whl
+RUN pip install /tmp/api_lib-0.1.0-py3-none-any.whl
+
+COPY ./tasks/pyproject.toml ./
+
+RUN pip install -e .
+RUN pip install -e .[test]
+
+COPY . .
+
+EXPOSE ${PORT}

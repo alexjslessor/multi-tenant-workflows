@@ -1,0 +1,24 @@
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+addopts = [
+    "--tb=line",
+    "-s"]
+
+testpaths = [
+  "./test_e2e.py"
+]
+filterwarnings = ["ignore::DeprecationWarning", "ignore::PendingDeprecationWarning"]
+markers = [
+    "workflow: unit test workflows"]
+
+[tool.mypy]
+plugins = ["pydantic.mypy"]
+follow_imports = "normal"
+follow_imports_for_stubs = false
+check_untyped_defs = true
+warn_no_return = true
+warn_unreachable = false
+no_silence_site_packages = false
+strict_optional = true
+allow_redefinition = true
+disable_error_code = ["import-untyped", "var-annotated", "misc"]

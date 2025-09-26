@@ -1,0 +1,122 @@
+services:
+
+  rabbit:
+    image: rabbitmq:3.12.4-management
+    container_name: rabbit
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=test
+      - RABBITMQ_DEFAULT_PASS=test
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 10s
+      retries: 5
+    networks:
+      - tenent-net
+    restart: always
+
+  redis:
+    image: redis:alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - tenent-net
+    restart: always
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: alexjslessor@gmail.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
+      PGPASSFILE: /pgpass/pgpass
+    ports:
+      - "8085:80"
+    depends_on:
+      - postgres
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      - ./pgadmin/servers.json:/pgadmin4/servers.json:ro
+      - ./pgadmin/pgpass:/pgpass/pgpass:ro
+    networks:
+      - tenent-net
+    restart: always
+
+  postgres:
+    image: postgres:17 # keycloak requires 17
+    container_name: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+      POSTGRES_HOST_AUTH_METHOD: trust
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # - ./postgres.sql:/docker-entrypoint-initdb.d/init.sql # Mounts the SQL script
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - tenent-net
+    restart: always
+
+  keycloak: # https://www.keycloak.org/server/containers
+    image: quay.io/keycloak/keycloak:latest
+    environment:
+      - KC_BOOTSTRAP_ADMIN_USERNAME=admin
+      - KC_BOOTSTRAP_ADMIN_PASSWORD=admin
+
+      - KEYCLOAK_REALM=demo-mcp
+      - KEYCLOAK_CLIENT_ID=mcp-secure
+      - KEYCLOAK_SECRET=6UJzbvU6H29BeiiEUx6f4lfqKFzMu9nD
+
+      - KC_HOSTNAME=localhost
+      # - KC_HOSTNAME_STRICT_HTTPS=false
+
+      - KC_DB=postgres
+      # - KC_DB_URL=postgres
+      - KC_DB_URL=jdbc:postgresql://postgres/postgres
+      - KC_DB_USERNAME=postgres
+      - KC_DB_PASSWORD=postgres
+
+      # - KC_HOSTNAME_STRICT_BACKCHANNEL=true
+      - KC_HEALTH_ENABLED=true
+      - KC_METRICS_ENABLED=true
+      - KC_LOG_LEVEL=info
+    volumes:
+      - ./demo-mcp-realm.json:/opt/keycloak/data/import/demo-mcp-realm.json
+      - keycloak_volume:/opt/keycloak/data
+    ports:
+      - 8080:8080
+    depends_on:
+      - postgres
+    networks:
+      - tenent-net
+    # https://www.keycloak.org/server/containers#_exposing_the_container_to_a_different_port
+    # https://www.keycloak.org/server/containers#_trying_keycloak_in_development_mode
+    command: start-dev --http-port=8080 --import-realm --verbose
+    restart: "no"
+
+volumes:
+  pgadmin_data:
+  keycloak_volume:
+  postgres_data:
+
+networks:
+  tenent-net:
+    driver: bridge

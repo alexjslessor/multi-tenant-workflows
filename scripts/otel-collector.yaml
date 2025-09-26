@@ -1,0 +1,76 @@
+apiVersion: opentelemetry.io/v1beta1
+kind: OpenTelemetryCollector
+metadata:
+  name: otel
+  namespace: default
+spec:
+  mode: deployment
+  image: otel/opentelemetry-collector-contrib:0.90.0
+  config:
+    receivers:
+      otlp: # zero-code intrumentation (traces)
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+            cors:
+              allowed_origins:
+                - "https://website.com"
+                - "http://localhost:*"
+      prometheus:
+        config:
+          scrape_configs:
+          - job_name: 'kubernetes-pods'
+            kubernetes_sd_configs:
+            - role: pod
+            relabel_configs:
+            - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+              action: keep
+              regex: true
+      hostmetrics:
+        collection_interval: 10s
+        scrapers:
+          cpu: {}
+          memory: {}
+          disk: {}
+          network: {}
+      filelog:
+        include: ["/var/log/pods/*/*/*.log"]
+        operators:
+        - type: json_parser
+          id: parser-docker
+          timestamp:
+            parse_from: attributes.time
+            layout: '%Y-%m-%dT%H:%M:%S.%LZ'
+    processors:
+      batch:
+        timeout: 1s
+        send_batch_size: 1024
+    exporters: # send to other services like grafana, loki, tempo, zipkin
+      zipkin:
+        endpoint: http://zipkin.observability.svc.cluster.local:9411/api/v2/spans
+      otlp:
+        endpoint: tempo.observability.svc.cluster.local:4317
+        tls:
+          insecure: true
+      prometheus:
+        endpoint: "0.0.0.0:8889"
+      loki:
+        endpoint: http://loki.observability.svc.cluster.local:3100/loki/api/v1/push
+      debug:
+        verbosity: detailed
+    service:
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [zipkin, otlp, debug]
+        metrics:
+          receivers: [prometheus, hostmetrics]
+          processors: [batch]
+          exporters: [prometheus, debug]
+        logs:
+          receivers: [filelog]
+          processors: [batch]
+          exporters: [loki, debug]

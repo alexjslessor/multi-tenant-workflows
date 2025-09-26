@@ -1,0 +1,91 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "tasks"
+version = "0.1.0"
+dependencies = [
+  "aio-pika==9.5.6",
+  "asyncpg==0.30.0",
+  "celery[redis]==5.4.0",
+  "fastapi==0.117.1",
+  "redis==5.2.1",
+  "sqlalchemy[asyncio]==2.0.43",
+  "openai==1.78.0",
+  "passlib[bcrypt]==1.7.4",
+  "psycopg2-binary==2.9.10",
+  "pydantic==2.10.5",
+  "pydantic_settings==2.9.1",
+  "pydantic_core==2.27.2",
+  "python-jose==3.5.0",
+  "python-multipart==0.0.20",
+  "uvicorn==0.36.0",
+  "uvloop==0.21.0",
+]
+
+[project.optional-dependencies]
+test = [
+  "httpx==0.27.0",
+  "asgi-lifespan==2.1.0",
+  "pytest==7.4.0",
+  "pytest-asyncio==0.21.1",
+  "pytest-cov==4.1.0",
+  "mypy==1.10.0",
+  "mypy-extensions==1.0.0",
+  "types-requests==2.31.0.20240406",
+  "types-six==1.16.21.20240425",
+  "types-pytz==2024.1.0.20240417",
+  "fpdf==1.7.2",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["api"]
+
+[tool.coverage.run]
+branch = true
+omit = [
+    "*/.virtualenvs/*",
+    "~/.virtualenvs"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+
+[tool.coverage.html]
+directory = "tests/coverage_report"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+addopts = [
+    "--cov=api",
+    "--cov-report=html",
+    "--tb=line",
+    "-s"]
+
+testpaths = ["tests"]
+filterwarnings = ["ignore::DeprecationWarning", "ignore::PendingDeprecationWarning"]
+markers = [
+  "e2e: end to end tests",
+  "e2e_job_start: create workflow -> start job with workflow id",
+  "e2e_create_workflow: create new workflow via http endpoint",
+  "job_start: test the start celery job start endpoint",
+  "job_list: list jobs endpoint",
+  "job_status: get job status endpoint",
+  "workflow_create_deps: create workflow dependency functions",
+  "workflow_list_route: list workflows via endpoint",
+  "workflow_create_route: create workflow endpoints",
+  "workflow_result_list_route: list workflow results via endpoint"
+]
+
+[tool.mypy]
+plugins = ["pydantic.mypy"]
+follow_imports = "normal"
+follow_imports_for_stubs = false
+check_untyped_defs = true
+warn_no_return = true
+warn_unreachable = false
+no_silence_site_packages = false
+strict_optional = true
+allow_redefinition = true
+disable_error_code = ["import-untyped", "var-annotated", "misc"]

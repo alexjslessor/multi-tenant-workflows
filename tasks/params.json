@@ -1,0 +1,30 @@
+[
+    {
+        "api": "REDDIT",
+        "limit": 0,
+        "search": [
+            "oxycontin"
+        ]
+    },
+    {
+        "api": "REDDIT",
+        "limit": 0,
+        "search": [
+            "ozempic"
+        ]
+    },
+    {
+        "api": "REDDIT",
+        "limit": 0,
+        "search": [
+            "cancer"
+        ]
+    },
+    {
+        "api": "FACEBOOK",
+        "limit": 0,
+        "search": [
+            "ozempic"
+        ]
+    }
+]

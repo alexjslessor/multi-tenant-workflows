@@ -1,0 +1,13 @@
+# https://opentelemetry.io/docs/platforms/kubernetes/operator/automatic/#auto-instrumenting-python-logs
+apiVersion: opentelemetry.io/v1alpha1
+kind: Instrumentation
+metadata:
+  name: otel-instrumentation
+spec:
+  exporter:
+    endpoint: http://otel-collector:4318               
+  propagators:                                    
+    - tracecontext
+    - baggage
+  sampler:
+    type: always_on
