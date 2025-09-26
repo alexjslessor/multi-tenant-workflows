@@ -4,8 +4,22 @@ The only requirement is to have docker & docker-compose installed.
 
 Run `docker-compose up --build` to start all the microservices.
 
-# Unit tests
+# Overview
 
+There are 2 microservices in this repository and 1 python library in this project.
+```
+~/
+├── api-lib                     -> shared python library for use in all microservices.
+├── demo-mcp-realm.json         -> keycloak realm configuration file.
+├── env.sh                      -> environment variables for local development.
+├── metadata                    -> metadata microservice
+├── pgadmin                     -> pgadmin configuration for local development.
+├── pyproject.toml              -> poetry configuration file for running integration tests
+├── scripts                     -> scripts for deploying services to kubernetes
+├── tasks                       -> tasks microservice
+└── test_e2e.py                 -> end to end integration tests
+```
+# Unit tests
 In the root directory of each microservice there is a tests folder containing the  unit tests for that service.
 
 There are two ways to run the unit tests:
