@@ -11,7 +11,7 @@ services:
     volumes:
       - ./metadata:/usr/src/app:z
     ports:
-      - "5003:4000"
+      - "5001:4000"
     environment:
       - PORT=4000
       - RABBIT=amqp://test:test@rabbit:5672

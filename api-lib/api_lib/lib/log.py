@@ -12,7 +12,6 @@ LOGGING_CONFIG = {
             "format": '%(asctime)s - %(levelname)s - %(message)s',
             "datefmt": "%H:%M",
         }
-
     },
     "handlers": {
         "default": {
@@ -42,8 +41,8 @@ LOGGING_CONFIG = {
             "level": "INFO",
             "propagate": False,
         },
-        # Your app-specific logger
-        "video-storage": {
+        # app-specific logger
+        "tasks": {
             "handlers": ["default"],
             "level": "DEBUG",
             "propagate": False,

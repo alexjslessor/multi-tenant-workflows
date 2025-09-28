@@ -38,8 +38,8 @@ There are two ways to run the unit tests:
 The FastAPI framework is whats known as "self-documenting".
 
 This means that the API documentation is automatically generated based on the code and annotations in the application.
-- tasks microservice: http://localhost:5000/docs
-- metadata microservice: http://localhost:5003/docs
+- tasks microservice: `http://localhost:5000/docs`
+- metadata microservice: `http://localhost:5001/docs`
 
 # PGAdmin
 I've included a PgAdmin container that is pre-configured to use the postgres database in the conpose file.
@@ -50,9 +50,20 @@ Available at: [http://localhost:8085/browser](http://localhost:8085/browser)
 username: alexjslessor@gmail.com
 password: admin
 
-
 ## SQL Queries for PGAdmin
 ```sql
 SELECT * FROM public.workflow;
 DELETE FROM public.workflow;
 ```
+
+# Keycloak UI
+The keycloak container is pre-configured to use the demo-mcp-realm.json file in the root of the repository.
+
+To view the UI navigate to the following URL: [http://localhost:8080](http://localhost:8080)
+
+- username: admin
+- password: admin
+
+
+
+
