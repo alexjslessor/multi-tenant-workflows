@@ -2,7 +2,7 @@ from functools import lru_cache
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
-    TITLE: str = 'user-auth API'
+    TITLE: str = 'Metadata API'
     PREFIX: str = ""
     ALGORITHM: str = "HS256"
     AUDIENCE: str = "aud-var"
@@ -24,10 +24,6 @@ class Settings(BaseSettings):
     @property
     def OPENAPI_URL(self) -> str:
         return f'{self.PREFIX}/openapi'
-
-    @property
-    def POSTGRES_ROUTES_PREFIX(self) -> str:
-        return f'{self.PREFIX}/postgres'
 
     @property
     def POSTGRES_URL_ASYNC(self) -> str:

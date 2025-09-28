@@ -1,106 +1,29 @@
 import logging
-import logging.config
 from fastapi import (
     FastAPI,
-    HTTPException,
     Request,
-    FastAPI,
 )
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError, ResponseValidationError
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from typing import Any
 from pydantic import (
-    BaseModel, 
-    Field, 
-    ValidationError
+    ValidationError,
 )
-from .logs import LOGGING_CONFIG
+from api_lib.lib import ( 
+    FrontendException, 
+    PostException,
+    ErrorSchema,
+)
 from .settings import get_settings
 from .on_startup import lifespan
 
-logging.config.dictConfig(LOGGING_CONFIG)
-logger = logging.getLogger("uvicorn")
+
+logger = logging.getLogger("metadata")
 logger_err = logging.getLogger("uvicorn.error")
+
 settings = get_settings()
-SECRET = settings.SECRET
 DATABASE_URL = settings.postgres_url
-DBNAME = settings.DBNAME
-LIFETIME_SECONDS = settings.LIFETIME_SECONDS
-
-class ErrorSchema(BaseModel):
-    message: str | None = Field(
-        default_factory=lambda: '', 
-        description='Developer written message. May be displayed to the user on frontend.')
-    error: str | None = Field(
-        default_factory=lambda: '', 
-        description='System generated message, usually from an exception. Always logged.')
-    color: str | None = Field(
-        default_factory=lambda: '', 
-        description='Color for frontend developer user feedback.')
-    class Config:
-        populate_by_name = True
-        json_schema_extra = {
-            "examples": [
-                {
-                    "message": "Developer error msg ",
-                    "error": "Exception error msg",
-                    "color": "red",
-                }
-            ]
-        }
-
-class PostException(HTTPException):
-    def __init__(
-        self, 
-        detail: str, 
-        status_code: int
-    ):
-        self.status_code = status_code
-        self.detail = detail
-
-class FrontendException(HTTPException):
-    def __init__(
-        self, 
-        message: Any, 
-        error: Any,
-        status_code: int = 404,
-        color: str = 'warning'
-    ):
-        self.message = message
-        self.error = error
-        self.status_code = status_code
-        self.color = color
-        self.detail = self.message
-
-    @classmethod
-    def from_error(
-        cls, 
-        message, 
-        error, 
-        status_code: int = 404
-    ):
-        return cls(
-            message=message,
-            error=error,
-            status_code=status_code,
-            color='error'
-        )
-
-    @classmethod
-    def from_warn(
-        cls, 
-        message, 
-        error, 
-        status_code: int = 404
-    ):
-        return cls(
-            message=message,
-            error=error,
-            status_code=status_code,
-            color='warning'
-        )
 
 def parse_validation_error(excp: ValidationError):
     import re

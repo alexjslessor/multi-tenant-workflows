@@ -24,10 +24,9 @@ In the root directory of each microservice there is a tests folder containing th
 
 There are two ways to run the unit tests:
 - Inside the docker-context and outside the docker-context.
-
-- `docker exec -it <container_id> pytest`
-  - This runs the tests inside the container. You can get the container_id by running `docker ps`
-  - e.g. `docker exec -it f7d48c196b37 pytest -m workflow_create_route`
+- `docker exec -it <container_name> pytest`
+  - This runs the tests inside the container. You can get the container name by running `docker ps` and looking at the name column.
+  - e.g. `docker exec -it tasks pytest -m workflow_create_route`
 - `pytest -m workflow_create_route`
   - This runs the tests outside the container. You need to have all the dependencies installed in your local machine in a python environment.
   - e.g. `pytest -m workflow_create_route`
@@ -64,6 +63,6 @@ To view the UI navigate to the following URL: [http://localhost:8080](http://loc
 - username: admin
 - password: admin
 
-
-
-
+*References for configuring keycloak.*
+- https://www.keycloak.org/server/containers#_exposing_the_container_to_a_different_port
+- https://www.keycloak.org/server/containers#_trying_keycloak_in_development_mode

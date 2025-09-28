@@ -3,21 +3,21 @@ from sqlalchemy.future import select
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from ..db import get_async_session
-from ..lib.error_schema import FrontendException
+from api_lib.lib import FrontendException
 from ..models.workflow import (
     WorkflowSchema,
     WorkflowModel,
     WorkflowResultModel,
 )
 from .pagination import pagination
-# from api.lib.rabbit import broadcast_message
-# from .rabbit_conn import get_channel
+from ..lib.rabbit import broadcast_message
+from .rabbit_conn import get_channel
 
 logger = logging.getLogger("uvicorn")
 
 async def create_workflow(
     workflow: WorkflowSchema,
-    # channel = Depends(get_channel),
+    channel = Depends(get_channel),
     db: AsyncSession = Depends(get_async_session),
 ):
     try:
@@ -25,7 +25,16 @@ async def create_workflow(
         record = WorkflowModel(**data)
         db.add(record)
         await db.commit()
-        # await broadcast_message(channel, {'hello': 'world'}, 'create_workflow')
+
+        await broadcast_message(
+            channel,
+            {
+                "id": record.id,
+                "tenant_id": record.tenant_id,
+                "workflow": workflow.workflow,
+            },
+            "create_workflow",
+        )
         return record
     except Exception as e:
         await db.rollback()

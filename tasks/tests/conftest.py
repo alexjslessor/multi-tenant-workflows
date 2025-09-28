@@ -9,16 +9,11 @@ from sqlalchemy.orm import sessionmaker
 from api.settings import get_settings
 from api.models.base import Base
 import httpx
-from api.logs import LOGGING_CONFIG
-# Import app after toggling test mode
+from api_lib.lib import LOGGING_CONFIG
 from api.main import app  # noqa: E402
 from api.deps.rabbit_conn import get_channel  # noqa: E402
 
-# Configure logging first
 logging.config.dictConfig(LOGGING_CONFIG)
-
-# Ensure external service connections are disabled for unit tests
-os.environ.setdefault("DISABLE_EXTERNAL_SERVICES", "1")
 
 cfg = get_settings()
 engine = create_async_engine(cfg.POSTGRES_URL_ASYNC, echo=True)
@@ -97,7 +92,17 @@ def dummy_rabbit_channel():
 
 @pytest.fixture(autouse=True)
 def override_rabbit_dependency(dummy_rabbit_channel):
-    """Provide a dummy rabbit channel in all tests to avoid real connections."""
+    """Provide a dummy rabbit channel in tests unless explicitly disabled.
+
+    Set env var `USE_REAL_RABBIT=1` to allow tests to use the real
+    RabbitMQ connection (so other services like `metadata` can receive
+    and log published messages).
+    """
+    import os
+    if os.getenv("USE_REAL_RABBIT") == "1":
+        # Do not override dependency; use real channel from app state
+        yield
+        return
     app.dependency_overrides[get_channel] = lambda: dummy_rabbit_channel
     yield
     app.dependency_overrides.pop(get_channel, None)

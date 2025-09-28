@@ -1,13 +1,13 @@
 import logging
 from fastapi import Depends
 from celery.result import AsyncResult as CeleryAsyncResult
-# from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-from ..db import get_async_session
-from ..lib.error_schema import FrontendException
+
+from api_lib.lib import FrontendException
+
 from ..tasks import celery, execute_workflow
-# from api.lib.rabbit import broadcast_message
-# from .rabbit_conn import get_channel
+
+from ..lib.rabbit import broadcast_message
+from .rabbit_conn import get_channel
 from .client_redis import client_redis
 from ..settings import get_settings
 
@@ -16,14 +16,20 @@ logger = logging.getLogger("uvicorn")
 
 async def trigger_workflow(
     id: str,
-    # channel = Depends(get_channel),
+    channel = Depends(get_channel),
 ):
     try:
         task = execute_workflow.delay(
             id,
         )
-        # logger.info(task)
-        # await broadcast_message(channel, {'hello': 'world'}, 'trigger_workflow')
+        await broadcast_message(
+            channel,
+            {
+                "workflow_id": id, 
+                "job_id": task.id,
+            },
+            "trigger_workflow",
+        )
         return {
             "job_id": task.id,
         }

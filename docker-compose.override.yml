@@ -107,8 +107,6 @@ services:
       - postgres
     networks:
       - tenent-net
-    # https://www.keycloak.org/server/containers#_exposing_the_container_to_a_different_port
-    # https://www.keycloak.org/server/containers#_trying_keycloak_in_development_mode
     command: start-dev --http-port=8080 --import-realm --verbose
     restart: "no"
 
