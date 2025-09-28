@@ -1,3 +1,4 @@
+import json
 import logging
 import logging.config
 from fastapi import FastAPI
@@ -10,7 +11,7 @@ from api_lib.lib import (
 )
 from api.settings import get_settings
 import aio_pika
-import json
+from aio_pika.abc import AbstractRobustConnection as RabbitConType
 
 settings = get_settings()
 logger = logging.getLogger('metadata')
@@ -36,8 +37,8 @@ async def lifespan(app: FastAPI):
     try:
         logging.config.dictConfig(LOGGING_CONFIG)
 
-        rabbit_connection: aio_pika.abc.AbstractRobustConnection = await connect_to_rabbitmq(settings.RABBIT)
-        rabbit_channel = await rabbit_connection.channel()
+        rabbit_con: RabbitConType = await connect_to_rabbitmq(settings.RABBIT)
+        rabbit_channel = await rabbit_con.channel()
         # exchange-1
         ex_1 = await rabbit_channel.declare_exchange(
             name="create_workflow", 

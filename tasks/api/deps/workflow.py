@@ -1,9 +1,10 @@
 import logging
-from sqlalchemy.future import select
 from fastapi import Depends
+from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from ..db import get_async_session
+
 from api_lib.lib import FrontendException
+
 from ..models.workflow import (
     WorkflowSchema,
     WorkflowModel,
@@ -11,9 +12,10 @@ from ..models.workflow import (
 )
 from .pagination import pagination
 from ..lib.rabbit import broadcast_message
-from .rabbit_conn import get_channel
+from .db import get_async_session, get_channel
 
-logger = logging.getLogger("uvicorn")
+
+logger = logging.getLogger("tasks")
 
 async def create_workflow(
     workflow: WorkflowSchema,
@@ -66,13 +68,12 @@ async def list_workflow(
         )
 
 async def list_workflow_results(
-    # tenant_id: str,
     db: AsyncSession = Depends(get_async_session),
 ):
     try:
         query = select(
             WorkflowResultModel
-        )#.where(WorkflowResultModel.tenant_id == tenant_id)
+        )
         result = await db.execute(query)
         resp = result.scalars().all()
         return resp

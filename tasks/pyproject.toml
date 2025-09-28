@@ -64,7 +64,11 @@ addopts = [
     "-s"]
 
 testpaths = ["tests"]
-filterwarnings = ["ignore::DeprecationWarning", "ignore::PendingDeprecationWarning"]
+filterwarnings = [
+  "ignore:RuntimeWarning",
+  "ignore::DeprecationWarning", 
+  "ignore::PendingDeprecationWarning",
+]
 markers = [
   "e2e: end to end tests",
   "e2e_job_start: create workflow -> start job with workflow id",

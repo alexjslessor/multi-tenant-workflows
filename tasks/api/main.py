@@ -1,11 +1,13 @@
-import os
-import aio_pika
 import redis
+import aio_pika
 import datetime
 import logging
 import logging.config
 from contextlib import asynccontextmanager
-from sqlalchemy import create_engine
+from sqlalchemy.ext.asyncio import (
+    async_sessionmaker, 
+    create_async_engine, 
+)
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError, ResponseValidationError
 from fastapi import FastAPI, Request
@@ -32,22 +34,24 @@ logger = logging.getLogger("tasks")
 async def lifespan(app: FastAPI):
     try:
         logging.config.dictConfig(LOGGING_CONFIG)
-        # engine_async = create_async_engine(settings.POSTGRES_URL_ASYNC)
-
-        await create_all_tables()
-        # Connect external services
-        app.state.redis_client = redis.from_url(settings.REDIS_URL)
+        engine_async = create_async_engine(settings.POSTGRES_URL_ASYNC)
+        await create_all_tables(engine_async)
+        async_session_maker = async_sessionmaker(
+            engine_async, 
+            expire_on_commit=False,
+        )
 
         rabbit_con = await connect_to_rabbitmq(settings.RABBIT)
         rabbit_channel = await rabbit_con.channel()
-
-        await rabbit_channel.declare_exchange(
-            "create_workflow", 
-            aio_pika.ExchangeType.FANOUT, 
-            durable=True
-        )
+        # await rabbit_channel.declare_exchange(
+        #     "create_workflow", 
+        #     aio_pika.ExchangeType.FANOUT, 
+        #     durable=True
+        # )
         app.state.rabbit_con = rabbit_con
         app.state.rabbit_channel = rabbit_channel
+        app.state.redis_client = redis.from_url(settings.REDIS_URL)
+        app.state.async_session_maker = async_session_maker
         yield
         # Taredown
         app.state.redis_client.close()
@@ -68,7 +72,7 @@ app = FastAPI(
 @app.exception_handler(FrontendException)
 def frontend_exception_handler(
     req: Request, 
-    ex: FrontendException
+    ex: FrontendException,
 ):
     return JSONResponse(
         status_code=ex.status_code,

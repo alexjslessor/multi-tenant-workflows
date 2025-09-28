@@ -24,7 +24,11 @@ async def broadcast_message(
         provider = StaticChannelProvider(channel)
         publisher = RabbitPublisher(provider)
         body = RabbitMessage(data=message).model_dump()
-        await publisher.publish(exchange, body, exchange_type=aio_pika.ExchangeType.FANOUT)
+        await publisher.publish(
+            exchange, 
+            body, 
+            exchange_type=aio_pika.ExchangeType.FANOUT,
+        )
         logger.info(f'message broadcast on exchange: {exchange}')
     except Exception as e:
         logger.error(f"Error broadcasting message: {e}")

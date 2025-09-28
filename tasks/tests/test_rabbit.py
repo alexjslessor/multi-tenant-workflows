@@ -4,7 +4,7 @@ import asyncio
 from unittest.mock import AsyncMock, MagicMock
 from fastapi import HTTPException
 from api.lib.rabbit import broadcast_message
-from api.deps.rabbit_conn import get_channel
+from api.deps.db import get_channel
 
 
 @pytest.mark.asyncio

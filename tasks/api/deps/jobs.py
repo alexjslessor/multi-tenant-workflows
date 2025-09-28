@@ -5,14 +5,12 @@ from celery.result import AsyncResult as CeleryAsyncResult
 from api_lib.lib import FrontendException
 
 from ..tasks import celery, execute_workflow
-
 from ..lib.rabbit import broadcast_message
-from .rabbit_conn import get_channel
-from .client_redis import client_redis
+from .db import redis_client, get_channel
 from ..settings import get_settings
 
 settings = get_settings()
-logger = logging.getLogger("uvicorn")
+logger = logging.getLogger("tasks")
 
 async def trigger_workflow(
     id: str,
@@ -62,11 +60,11 @@ async def get_job_status(
     }
 
 def list_jobs(
-    client_redis = Depends(client_redis),
+    redis_client = Depends(redis_client),
 ):
     """get all job ids and statuses from redis cache"""
     try:
-        redis_keys = client_redis.keys("celery-task-meta-*")
+        redis_keys = redis_client.keys("celery-task-meta-*")
         results = []
         for job_key in redis_keys:
             job_id = job_key.decode().replace("celery-task-meta-", "")

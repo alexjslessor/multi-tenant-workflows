@@ -66,3 +66,8 @@ To view the UI navigate to the following URL: [http://localhost:8080](http://loc
 *References for configuring keycloak.*
 - https://www.keycloak.org/server/containers#_exposing_the_container_to_a_different_port
 - https://www.keycloak.org/server/containers#_trying_keycloak_in_development_mode
+
+
+# Useful Commands
+- `docker-compose restart <container name>`: Restarts the a container named worker.
+- `docker exec -it tasks pytest -m workflow_create_route`: Runs the unit tests with the marker "workflow_create_route" inside the tasks container.
