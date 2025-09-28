@@ -22,12 +22,6 @@ class TestE2E:
         body = WorkflowSchema(
             tenant_id="tenant-1",
             workflow=dummy_workflow,
-            # workflow=[
-            #     {
-            #         'action': 'http_request',
-            #         "params": {"a": 1, "b": 2}
-            #     },
-            # ]
         )
         resp = await test_client.post("/workflow-create", json=body.model_dump())
         assert resp.status_code == 200, f'{resp.status_code} - {resp.json()}'

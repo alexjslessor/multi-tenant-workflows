@@ -1,18 +1,25 @@
-import aio_pika
 import redis
+import aio_pika
 import datetime
 import logging
 import logging.config
 from contextlib import asynccontextmanager
+from sqlalchemy.ext.asyncio import (
+    async_sessionmaker, 
+    create_async_engine, 
+)
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError, ResponseValidationError
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from api_lib.lib.rabbit import connect_to_rabbitmq
-from .lib.error_schema import responses, FrontendException
+from api_lib.lib import (
+    LOGGING_CONFIG,
+    connect_to_rabbitmq,
+    FrontendException,
+)
+from .lib.error_schema import responses
 from .settings import get_settings
-from .logs import LOGGING_CONFIG
 from .db import create_all_tables
 from .routes import (
     job_routes, 
@@ -21,39 +28,51 @@ from .routes import (
 )
 
 settings = get_settings()
-logger = logging.getLogger("uvicorn")
+logger = logging.getLogger("tasks")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
         logging.config.dictConfig(LOGGING_CONFIG)
-        app.state.redis_client = redis.from_url(settings.REDIS_URL)
+        engine_async = create_async_engine(settings.POSTGRES_URL_ASYNC)
+        await create_all_tables(engine_async)
+        async_session_maker = async_sessionmaker(
+            engine_async, 
+            expire_on_commit=False,
+        )
 
-        await create_all_tables()
-
-        # rabbit_connection = await connect_to_rabbitmq(settings.RABBIT)
-        # app.state.rabbit_channel = await rabbit_connection.channel()
-        # await app.state.rabbit_channel.declare_exchange(
+        rabbit_con = await connect_to_rabbitmq(settings.RABBIT)
+        rabbit_channel = await rabbit_con.channel()
+        # await rabbit_channel.declare_exchange(
         #     "create_workflow", 
         #     aio_pika.ExchangeType.FANOUT, 
-        #     durable=True,
+        #     durable=True
         # )
+        app.state.rabbit_con = rabbit_con
+        app.state.rabbit_channel = rabbit_channel
+        app.state.redis_client = redis.from_url(settings.REDIS_URL)
+        app.state.async_session_maker = async_session_maker
         yield
+        # Taredown
         app.state.redis_client.close()
-        # await rabbit_connection.close()
-        # await app.state.rabbit_channel.close()
+        await app.state.rabbit_channel.close()
+        await app.state.rabbit_con.close()
     except Exception as e:
         logger.error(e)
         raise
 
 app = FastAPI(
+    title=settings.TITLE,
+    openapi_url=settings.OPENAPI_URL,
+    docs_url=settings.DOCS_URL,
+    redoc_url=None,
     lifespan=lifespan,
 )
 
 @app.exception_handler(FrontendException)
 def frontend_exception_handler(
     req: Request, 
-    ex: FrontendException
+    ex: FrontendException,
 ):
     return JSONResponse(
         status_code=ex.status_code,

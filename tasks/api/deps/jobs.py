@@ -1,29 +1,33 @@
 import logging
 from fastapi import Depends
 from celery.result import AsyncResult as CeleryAsyncResult
-# from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-from ..db import get_async_session
-from ..lib.error_schema import FrontendException
+
+from api_lib.lib import FrontendException
+
 from ..tasks import celery, execute_workflow
-# from api.lib.rabbit import broadcast_message
-# from .rabbit_conn import get_channel
-from .client_redis import client_redis
+from ..lib.rabbit import broadcast_message
+from .db import redis_client, get_channel
 from ..settings import get_settings
 
 settings = get_settings()
-logger = logging.getLogger("uvicorn")
+logger = logging.getLogger("tasks")
 
 async def trigger_workflow(
     id: str,
-    # channel = Depends(get_channel),
+    channel = Depends(get_channel),
 ):
     try:
         task = execute_workflow.delay(
             id,
         )
-        # logger.info(task)
-        # await broadcast_message(channel, {'hello': 'world'}, 'trigger_workflow')
+        await broadcast_message(
+            channel,
+            {
+                "workflow_id": id, 
+                "job_id": task.id,
+            },
+            "trigger_workflow",
+        )
         return {
             "job_id": task.id,
         }
@@ -56,11 +60,11 @@ async def get_job_status(
     }
 
 def list_jobs(
-    client_redis = Depends(client_redis),
+    redis_client = Depends(redis_client),
 ):
     """get all job ids and statuses from redis cache"""
     try:
-        redis_keys = client_redis.keys("celery-task-meta-*")
+        redis_keys = redis_client.keys("celery-task-meta-*")
         results = []
         for job_key in redis_keys:
             job_id = job_key.decode().replace("celery-task-meta-", "")

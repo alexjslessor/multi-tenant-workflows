@@ -9,10 +9,9 @@ LOGGING_CONFIG = {
             "datefmt": "%H:%M",
         },
         "access": {
-            "format": '%(asctime)s - %(levelname)s - %(message)s',
+            "format": '%(asctime)s - %(levelname)s - %(funcName)s - %(message)s',
             "datefmt": "%H:%M",
         }
-
     },
     "handlers": {
         "default": {
@@ -25,41 +24,62 @@ LOGGING_CONFIG = {
             "class": "logging.StreamHandler",
             "formatter": "access",
         },
+        "console": {
+            "class": "logging.StreamHandler",
+            "level": "DEBUG",
+            "formatter": "default",
+            "stream": "ext://sys.stdout"
+        },
+    },
+    "root": {
+        "level": "INFO",
+        "handlers": [
+            "console",
+        ]
     },
     "loggers": {
         "uvicorn": {
-            "handlers": ["default"],
+            "handlers": [
+                "default",
+                'console',
+            ],
             "level": "INFO",
             "propagate": False,
         },
         "uvicorn.error": {
-            "handlers": ["default"],
+            "handlers": [
+                "default",
+            ],
             "level": "INFO",
             "propagate": False,
         },
         "uvicorn.access": {
-            "handlers": ["access"],
+            "handlers": [
+                "access",
+            ],
             "level": "INFO",
             "propagate": False,
         },
-        # Your app-specific logger
-        "video-storage": {
-            "handlers": ["default"],
+        "tasks": {
+            "handlers": [
+                "default",
+                'console',
+            ],
             "level": "DEBUG",
             "propagate": False,
         },
         "metadata": {
-            "handlers": ["default"],
-            "level": "DEBUG",
-            "propagate": False,
-        },
-        "auth": {
-            "handlers": ["default"],
+            "handlers": [
+                "default",
+                'console',
+            ],
             "level": "DEBUG",
             "propagate": False,
         },
         "rabbit": {
-            "handlers": ["default"],
+            "handlers": [
+                "default",
+            ],
             "level": "INFO",
             "propagate": False,
         },
