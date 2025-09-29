@@ -39,15 +39,19 @@ The FastAPI framework is whats known as "self-documenting".
 This means that the API documentation is automatically generated based on the code and annotations in the application.
 - tasks microservice: `http://localhost:5000/docs`
 - metadata microservice: `http://localhost:5001/docs`
+- keycloak: [http://localhost:8080](http://localhost:8080)
+- pgadmin: [http://localhost:8085/browser](http://localhost:8085/browser)
+  - username: alexjslessor@gmail.com
+  - password: admin
 
 # PGAdmin
 I've included a PgAdmin container that is pre-configured to use the postgres database in the conpose file.
 
 After youve run some unit tests or used the API you can view the database in PGAdmin.
+- Available at: [http://localhost:8085/browser](http://localhost:8085/browser)
+- username: alexjslessor@gmail.com
+- password: admin
 
-Available at: [http://localhost:8085/browser](http://localhost:8085/browser)
-username: alexjslessor@gmail.com
-password: admin
 
 ## SQL Queries for PGAdmin
 ```sql
