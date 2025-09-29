@@ -15,9 +15,6 @@ env:
   NAME: tasks
   DIRECTORY: tasks
   VERSION: ${{ github.sha }}
-  REGISTRY_UN: ${{ vars.REGISTRY_UN }}
-  REGISTRY_PW: ${{ secrets.REGISTRY_PW }}
-  CONTAINER_REGISTRY: ${{ vars.CONTAINER_REGISTRY }}
 
 jobs:
   test:
@@ -51,7 +48,6 @@ jobs:
           --health-timeout 5s
           --health-retries 3 
           --health-start-period 10s
-
       postgres:
         image: postgres:17
         ports:
@@ -69,9 +65,10 @@ jobs:
           --health-start-period 10s
 
     env:
-      RABBIT: amqp://test:test@rabbit:5672
-      REDIS_URL: redis://redis:6379/0
-      POSTGRES_URL: postgresql://postgres:postgres@postgres:5432/postgres
+      # Use localhost to reach GitHub Actions service containers from the runner
+      RABBIT: amqp://test:test@127.0.0.1:5672
+      REDIS_URL: redis://127.0.0.1:6379/0
+      POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
     steps:
       - uses: actions/checkout@v4
 
@@ -98,6 +95,18 @@ jobs:
           cd $DIRECTORY
           python -m pip install .
           python -m pip install .[test]
+
+      - name: Wait for services to be ready
+        run: |
+          echo "Waiting for Postgres (5432)..."
+          for i in {1..60}; do
+            (echo > /dev/tcp/127.0.0.1/5432) >/dev/null 2>&1 && echo "Postgres is ready" && break; sleep 2; done
+          echo "Waiting for Redis (6379)..."
+          for i in {1..60}; do
+            (echo > /dev/tcp/127.0.0.1/6379) >/dev/null 2>&1 && echo "Redis is ready" && break; sleep 2; done
+          echo "Waiting for RabbitMQ (5672)..."
+          for i in {1..60}; do
+            (echo > /dev/tcp/127.0.0.1/5672) >/dev/null 2>&1 && echo "RabbitMQ is ready" && break; sleep 2; done
 
       - name: unit-tests
         run: |
