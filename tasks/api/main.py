@@ -1,5 +1,5 @@
 import redis
-import aio_pika
+# import aio_pika
 import datetime
 import logging
 import logging.config
