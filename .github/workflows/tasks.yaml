@@ -96,6 +96,7 @@ jobs:
           cd api-lib
           python -m pip install poetry
           poetry install
+          cd ..
 
           cd $DIRECTORY
           python -m pip install .
