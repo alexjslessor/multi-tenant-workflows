@@ -92,11 +92,8 @@ jobs:
       - name: install python dependencies
         run: |
           python -m pip install --upgrade pip
-
-          cd api-lib
-          python -m pip install poetry
-          poetry install
-          cd ..
+          # Install local api-lib into the runner's Python env
+          python -m pip install ./api-lib
 
           cd $DIRECTORY
           python -m pip install .
