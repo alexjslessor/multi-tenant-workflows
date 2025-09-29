@@ -1,5 +1,5 @@
 import redis
-import aio_pika
+# import aio_pika
 import datetime
 import logging
 import logging.config
@@ -69,6 +69,14 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.CORS_ORIGINS,
+    allow_methods=settings.CORS_ALLOW_METHODS,
+    allow_headers=settings.CORS_ALLOW_HEADERS,
+    allow_credentials=settings.CORS_ALLOW_CREDENTIALS,
+)
+
 @app.exception_handler(FrontendException)
 def frontend_exception_handler(
     req: Request, 
@@ -109,14 +117,6 @@ async def middleware_log(request: Request, call_next):
     process_time = datetime.datetime.now() - start_time
     response.headers["X-Time-Elapsed"] = str(process_time)
     return response
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
-    allow_methods=settings.CORS_ALLOW_METHODS,
-    allow_headers=settings.CORS_ALLOW_HEADERS,
-    allow_credentials=settings.CORS_ALLOW_CREDENTIALS,
-)
 
 app.include_router(
     job_routes.router, prefix=settings.PREFIX, tags=['jobs'], responses=responses)

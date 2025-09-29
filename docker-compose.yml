@@ -27,6 +27,7 @@ services:
     restart: "no"
 
   tasks:
+    image: tasks
     container_name: tasks
     build:
       context: ./
@@ -51,7 +52,8 @@ services:
     restart: "no"
 
   worker:
-    container_name: celery-worker
+    image: worker
+    container_name: worker
     build:
       context: ./
       dockerfile: tasks/Dockerfile-dev

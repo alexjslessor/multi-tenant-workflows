@@ -77,6 +77,7 @@ services:
 
   keycloak: # https://www.keycloak.org/server/containers
     image: quay.io/keycloak/keycloak:latest
+    container_name: keycloak
     environment:
       - KC_BOOTSTRAP_ADMIN_USERNAME=admin
       - KC_BOOTSTRAP_ADMIN_PASSWORD=admin

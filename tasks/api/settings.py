@@ -3,7 +3,7 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    TITLE: str = 'backend'
+    TITLE: str = 'Workflows API'
     PREFIX: str = ''
     DOCS_URL: str = '/docs'
     OPENAPI_URL: str = '/openapi'
