@@ -87,10 +87,7 @@ jobs:
           cd api-lib
           poetry build
           poetry config virtualenvs.create false
-          poetry install --no-dev
-          # cd ..
-          # Install the local api-lib first so tasks can import it
-          # python -m pip install ./api-lib
+          poetry install
 
       - name: install python dependencies
         run: |
